@@ -1,29 +1,21 @@
 name: discord-topka
-
 on:
   schedule:
     - cron: "*/5 * * * *"
   workflow_dispatch:
-
 jobs:
   run:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
-
-      - name: Setup Python
-        uses: actions/setup-python@v4
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
-          python-version: '3.11'
-
-      - name: Install requests
-        run: pip install requests
-
+          node-version: "20"
       - name: Run script
         env:
           FIREBASE_DB_URL: ${{ secrets.FIREBASE_DB_URL }}
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           DISCORD_MESSAGE_ID: ${{ secrets.DISCORD_MESSAGE_ID }}
-        run: python discord-topka-bot/update_discord_topka.py
+        run: node discord-topka-bot/update_discord_topka.mjs
