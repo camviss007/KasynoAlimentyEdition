@@ -39,16 +39,17 @@ async function readLeaderboard(dbUrl) {
   return rows;
 }
 
-async function discordRequest(url, method, payload) {
-  const resp = await fetch(url, {
-    method,
-    headers: {
-      "Content-Type": "application/json",
-      "Accept": "application/json",
-      "User-Agent": "KasynoTopkaBot/2.0"
-    },
-    body: JSON.stringify(payload)
-  });
+async function discordRequest(url, method, payload = null) {
+  const headers = {
+    "Accept": "application/json",
+    "User-Agent": "KasynoTopkaBot/2.0"
+  };
+  const options = { method, headers };
+  if (payload !== null) {
+    headers["Content-Type"] = "application/json";
+    options.body = JSON.stringify(payload);
+  }
+  const resp = await fetch(url, options);
   if (resp.ok) {
     const txt = await resp.text();
     try { return txt ? JSON.parse(txt) : {}; } catch { return {}; }
@@ -84,6 +85,14 @@ async function main() {
   const created = await discordRequest(`${webhookUrl}?wait=true`, "POST", payload);
   const newId = String((created && created.id) || "").trim();
   if (!newId) throw new Error("POST ok, ale brak id wiadomosci w odpowiedzi.");
+  if (messageId && messageId !== newId) {
+    try {
+      await discordRequest(`${webhookUrl}/messages/${encodeURIComponent(messageId)}`, "DELETE");
+      console.log(`OK: usunieto poprzednia wiadomosc ${messageId}`);
+    } catch (e) {
+      console.log(`WARN: nie udalo sie usunac poprzedniej wiadomosci ${messageId}: ${e.message}`);
+    }
+  }
   console.log(`OK: stworzono nowa wiadomosc. Ustaw DISCORD_MESSAGE_ID=${newId}`);
 }
 
