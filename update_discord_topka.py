@@ -63,22 +63,37 @@ def main():
     webhook_url = (os.environ.get("DISCORD_WEBHOOK_URL") or "").strip().rstrip("/")
     message_id = (os.environ.get("DISCORD_MESSAGE_ID") or "").strip()
 
-    if not db_url or not webhook_url or not message_id:
-        raise RuntimeError("Brak sekretow: FIREBASE_DB_URL / DISCORD_WEBHOOK_URL / DISCORD_MESSAGE_ID")
+    if not db_url or not webhook_url:
+        raise RuntimeError("Brak sekretow: FIREBASE_DB_URL / DISCORD_WEBHOOK_URL")
 
     leaderboard_url = f"{db_url}/leaderboard.json"
     leaderboard = http_json(leaderboard_url, method="GET")
     rows = build_rows(leaderboard)
     payload = build_payload(rows)
 
-    edit_url = f"{webhook_url}/messages/{urllib.parse.quote(message_id)}"
+    if message_id:
+        edit_url = f"{webhook_url}/messages/{urllib.parse.quote(message_id)}"
+        try:
+            http_json(edit_url, method="PATCH", payload=payload)
+            print(f"OK: zaktualizowano topke (PATCH), wiersze={len(rows)}")
+            return
+        except urllib.error.HTTPError as exc:
+            body = exc.read().decode("utf-8", errors="ignore")
+            print(f"PATCH nieudany ({exc.code}). Sprobuje POST nowej wiadomosci. Szczegoly: {body}")
+
+    # Fallback: tworzy nowa wiadomosc i zwraca jej ID do ustawienia jako DISCORD_MESSAGE_ID.
+    post_url = f"{webhook_url}?wait=true"
     try:
-        http_json(edit_url, method="PATCH", payload=payload)
+        created = http_json(post_url, method="POST", payload=payload)
     except urllib.error.HTTPError as exc:
         body = exc.read().decode("utf-8", errors="ignore")
-        raise RuntimeError(f"Discord PATCH error {exc.code}: {body}") from exc
+        raise RuntimeError(f"Discord POST error {exc.code}: {body}") from exc
 
-    print(f"OK: zaktualizowano topke, wiersze={len(rows)}")
+    new_id = str((created or {}).get("id", "")).strip()
+    if not new_id:
+        raise RuntimeError("Wyslano nowa wiadomosc, ale brak ID w odpowiedzi Discord.")
+
+    print(f"OK: utworzono nowa wiadomosc topki. Ustaw DISCORD_MESSAGE_ID = {new_id}")
 
 
 if __name__ == "__main__":
