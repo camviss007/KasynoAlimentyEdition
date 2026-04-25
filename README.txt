@@ -12,6 +12,11 @@ Wymagane sekrety w GitHub repo (Settings -> Secrets and variables -> Actions):
    Przyklad: https://discord.com/api/webhooks/xxx/yyy
 3) DISCORD_MESSAGE_ID
    ID wiadomosci Discord, ktora ma byc edytowana
+   (moze byc puste na pierwszy run; skrypt utworzy nowa wiadomosc i wypisze ID)
+
+Wersja workflow:
+- teraz uruchamia Node.js skrypt: update_discord_topka.mjs
+- jesli PATCH nie dziala, robi fallback POST i poda nowe ID do ustawienia
 
 Jak uruchomic:
 1) wrzuc folder "discord-topka-bot" do repo na GitHub

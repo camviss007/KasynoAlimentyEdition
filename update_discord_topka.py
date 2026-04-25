@@ -8,7 +8,10 @@ from datetime import datetime, timezone
 
 def http_json(url, method="GET", payload=None, timeout=20):
     data = None
-    headers = {}
+    headers = {
+        "User-Agent": "KasynoTopkaBot/1.0 (+GitHubActions)",
+        "Accept": "application/json",
+    }
     if payload is not None:
         data = json.dumps(payload).encode("utf-8")
         headers["Content-Type"] = "application/json"
@@ -60,11 +63,16 @@ def build_payload(rows):
 
 def main():
     db_url = (os.environ.get("FIREBASE_DB_URL") or "").strip().rstrip("/")
-    webhook_url = (os.environ.get("DISCORD_WEBHOOK_URL") or "").strip().rstrip("/")
+    webhook_url = (os.environ.get("DISCORD_WEBHOOK_URL") or "").strip().strip("\"'").rstrip("/")
     message_id = (os.environ.get("DISCORD_MESSAGE_ID") or "").strip()
 
     if not db_url or not webhook_url:
         raise RuntimeError("Brak sekretow: FIREBASE_DB_URL / DISCORD_WEBHOOK_URL")
+    if "/api/webhooks/" not in webhook_url:
+        raise RuntimeError("DISCORD_WEBHOOK_URL nie wyglada na poprawny webhook Discord API (musi zawierac /api/webhooks/).")
+    # Wymuszenie wersjonowanego endpointu API.
+    webhook_url = webhook_url.replace("https://discord.com/api/webhooks/", "https://discord.com/api/v10/webhooks/")
+    webhook_url = webhook_url.replace("https://discordapp.com/api/webhooks/", "https://discord.com/api/v10/webhooks/")
 
     leaderboard_url = f"{db_url}/leaderboard.json"
     leaderboard = http_json(leaderboard_url, method="GET")
